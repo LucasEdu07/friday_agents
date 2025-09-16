@@ -1,0 +1,29 @@
+name: Chore
+description: Tarefa de manutenção/infra/CI
+title: "chore: "
+labels:
+  - chore
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - devops
+        - shared
+        - text
+        - vision
+    validations:
+      required: true
+  - type: textarea
+    id: desc
+    attributes:
+      label: Descrição
+      placeholder: "O que será feito e por quê"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Aceite
+      placeholder: "- [ ] ..."
