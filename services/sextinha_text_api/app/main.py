@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 try:
-    from models import AnalyzeRequest, AnalyzeResponse
+    from .models import AnalyzeRequest, AnalyzeResponse
 except ImportError:
     from services.sextinha_text_api.app.models import AnalyzeRequest, AnalyzeResponse
 
