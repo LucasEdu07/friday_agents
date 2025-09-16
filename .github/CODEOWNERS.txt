@@ -1,0 +1,8 @@
+# Revisores padrão
+* @LucasEdu07
+
+# Áreas
+/packages/sextinha_agent/  @LucasEdu07
+/packages/sextinha_vision/ @LucasEdu07
+/services/sextinha_text_api/  @LucasEdu07
+/services/sextinha_vision_api/ @LucasEdu07

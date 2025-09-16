@@ -1,0 +1,18 @@
+name: Bug
+description: Reportar um problema
+title: "fix: "
+labels: ["fix"]
+body:
+  - type: textarea
+    id: steps
+    attributes: {label: Passos para reproduzir, placeholder: "1) ... 2) ... 3) ..."}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: Esperado}
+  - type: textarea
+    id: actual
+    attributes: {label: Obtido}
+  - type: textarea
+    id: context
+    attributes: {label: Logs/Contexto}
