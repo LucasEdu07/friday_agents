@@ -1,0 +1,10 @@
+### Health
+GET http://localhost:8080/health
+
+### Analyze
+POST http://localhost:8080/analyze
+Content-Type: application/json
+
+{
+  "text": "Deu bom!"
+}
