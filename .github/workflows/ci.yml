@@ -15,3 +15,5 @@
     if [ "$ran" -eq 0 ]; then
       echo ">> mypy skipped (no packages/ or services/ yet)"
     fi
+
+- run: pip install ruff mypy pytest fastapi pydantic uvicorn
