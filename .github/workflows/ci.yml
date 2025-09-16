@@ -1,0 +1,17 @@
+- name: Type check (mypy)
+  run: |
+    set -e
+    ran=0
+    if [ -d packages ]; then
+      echo ">> mypy packages"
+      mypy packages
+      ran=1
+    fi
+    if [ -d services ]; then
+      echo ">> mypy services"
+      mypy services
+      ran=1
+    fi
+    if [ "$ran" -eq 0 ]; then
+      echo ">> mypy skipped (no packages/ or services/ yet)"
+    fi
