@@ -1,21 +1,49 @@
 name: Feature
 description: Solicitar/planejar uma funcionalidade
 title: "feat: "
-labels: ["feat"]
+labels:
+  - feat
 body:
   - type: dropdown
     id: area
-    attributes: {label: Área, options: ["text","vision","shared","devops"]}
+    attributes:
+      label: Área
+      options:
+        - text
+        - vision
+        - shared
+        - devops
+    validations:
+      required: true
+
   - type: dropdown
     id: priority
-    attributes: {label: Prioridade, options: ["P0","P1","P2","P3"], default: 1}
+    attributes:
+      label: Prioridade
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
   - type: input
     id: size
-    attributes: {label: Size (1,2,3,5), placeholder: "3"}
+    attributes:
+      label: Size (1,2,3,5)
+      placeholder: "3"
+
   - type: textarea
     id: desc
-    attributes: {label: Descrição, placeholder: "Contexto, objetivo, critérios de aceitação"}
-    validations: {required: true}
+    attributes:
+      label: Descrição
+      placeholder: "Contexto, objetivo, critérios de aceitação"
+    validations:
+      required: true
+
   - type: textarea
     id: acceptance
-    attributes: {label: Aceite, placeholder: "- [ ] ..."}
+    attributes:
+      label: Aceite
+      placeholder: "- [ ] ..."
