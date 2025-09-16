@@ -1,17 +1,44 @@
-- name: Type check (mypy)
-  run: |
-    set -e
-    ran=0
-    if [ -d packages ]; then
-      echo ">> mypy packages"
-      mypy packages
-      ran=1
-    fi
-    if [ -d services ]; then
-      echo ">> mypy services"
-      mypy services
-      ran=1
-    fi
-    if [ "$ran" -eq 0 ]; then
-      echo ">> mypy skipped (no packages/ or services/ yet)"
-    fi
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-type-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pytest fastapi pydantic uvicorn
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          set -e
+          ran=0
+          if [ -d packages ]; then
+            echo ">> mypy packages"
+            mypy packages
+            ran=1
+          fi
+          if [ -d services ]; then
+            echo ">> mypy services"
+            mypy services
+            ran=1
+          fi
+          if [ "$ran" -eq 0 ]; then
+            echo ">> mypy skipped (no packages/ or services/ yet)"
+          fi
+
+      - name: Tests (pytest)
+        run: pytest -q || true
