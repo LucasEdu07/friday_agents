@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
-import base64, binascii
+import base64
+import binascii
 
 try:
     from .models import VisionAnalyzeRequest, VisionAnalyzeResponse
