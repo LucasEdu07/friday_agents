@@ -1,0 +1,10 @@
+### Health
+GET http://localhost:8081/health
+
+### Analyze (com base64 qualquer)
+POST http://localhost:8081/vision/analyze
+Content-Type: application/json
+
+{
+  "image_base64": "aGVsbG8gdmJzCg=="  // "hello vbs\n"
+}
