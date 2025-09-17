@@ -1,0 +1,28 @@
+@host = http://localhost:8081 \\Ou 8083
+
+### Vision - Health
+GET {{host}}/health
+
+### Vision - Analyze (base64 válido, não-imagem)
+POST {{host}}/vision/analyze
+Content-Type: application/json
+
+{
+  "image_base64": "aGVsbG8gdmJzCg=="
+}
+
+### Vision - Analyze (png 1x1)
+POST {{host}}/vision/analyze
+Content-Type: application/json
+
+{
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/5+BAQACAgEA9lK2WQAAAABJRU5ErkJggg=="
+}
+
+### Vision - Analyze (inválido -> 422)
+POST {{host}}/vision/analyze
+Content-Type: application/json
+
+{
+  "image_base64": "###"
+}

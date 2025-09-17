@@ -1,0 +1,20 @@
+@host = http://localhost:8080
+
+### Text - Health
+GET {{host}}/health
+
+### Text - Analyze
+POST {{host}}/analyze
+Content-Type: application/json
+
+{
+  "text": "Sextinha é braba demais!"
+}
+
+### Text - Analyze (texto longo, testa preview)
+POST {{host}}/analyze
+Content-Type: application/json
+
+{
+  "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
