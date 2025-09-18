@@ -7,9 +7,7 @@ from services.shared.models import AppBaseModel
 
 
 class VisionAnalyzeRequest(AppBaseModel):
-    image_base64: str = Field(
-        ..., min_length=1, description="Imagem codificada em base64"
-    )
+    image_base64: str = Field(..., min_length=1, description="Imagem codificada em base64")
 
     @field_validator("image_base64")
     @classmethod
@@ -19,6 +17,7 @@ class VisionAnalyzeRequest(AppBaseModel):
         except (binascii.Error, ValueError) as e:
             raise ValueError("image_base64 inválido") from e
         return v
+
 
 class VisionAnalyzeResponse(AppBaseModel):
     size_bytes: int

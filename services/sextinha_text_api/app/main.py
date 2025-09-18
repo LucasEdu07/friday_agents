@@ -4,14 +4,18 @@ from .models import AnalyzeRequest, AnalyzeResponse
 
 app = FastAPI(title="Sextinha Text API", version="0.1.0")
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "sextinha_text_api"}
 
+
 def _count_words(txt: str) -> int:
     import re
+
     tokens = re.findall(r"\b\w+\b", txt, flags=re.UNICODE)
     return len(tokens)
+
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(req: AnalyzeRequest):

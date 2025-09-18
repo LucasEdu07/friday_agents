@@ -7,6 +7,7 @@ def _env_bool(name: str, default: bool) -> bool:
         return default
     return v.strip().lower() in {"1", "true", "yes", "y", "on"}
 
+
 HOST = os.getenv("HOST", "127.0.0.1")
 TEXT_PORT = int(os.getenv("TEXT_PORT", "8081"))
 VISION_PORT = int(os.getenv("VISION_PORT", "8083"))
