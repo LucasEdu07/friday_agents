@@ -1,4 +1,4 @@
-version: "3.9"
+# (sem a chave "version:" no topo)
 
 services:
   text:
@@ -13,11 +13,12 @@ services:
       - "${TEXT_PORT:-8000}:8000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      # troca /health -> /readiness
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/readiness || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 5s
+      start_period: 10s
 
   vision:
     build:
@@ -34,11 +35,13 @@ services:
       text:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      # troca /health -> /readiness
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/readiness || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 5s
+      start_period: 10s
 
 networks:
   default:
+    name: sextinha-net
