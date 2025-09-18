@@ -1,5 +1,7 @@
 from pydantic import Field, field_validator
+
 from services.shared.models import AppBaseModel
+
 
 class AnalyzeRequest(AppBaseModel):
     text: str = Field(..., min_length=1, description="Texto para análise")
