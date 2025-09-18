@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
+
 class AppBaseModel(BaseModel):
     """Base para todos os schemas das APIs."""
     model_config = ConfigDict(

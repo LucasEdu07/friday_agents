@@ -1,7 +1,10 @@
 import base64
 import binascii
+
 from pydantic import Field, field_validator
+
 from services.shared.models import AppBaseModel
+
 
 class VisionAnalyzeRequest(AppBaseModel):
     image_base64: str = Field(

@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from services.sextinha_text_api.app.main import app
 
 client = TestClient(app)

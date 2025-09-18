@@ -1,6 +1,8 @@
-from fastapi.testclient import TestClient
-from services.sextinha_vision_api.app.main import app
 import base64
+
+from fastapi.testclient import TestClient
+
+from services.sextinha_vision_api.app.main import app
 
 client = TestClient(app)
 
