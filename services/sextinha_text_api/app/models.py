@@ -16,6 +16,7 @@ class AnalyzeRequest(AppBaseModel):
             raise ValueError("text cannot be empty or whitespace")
         return s
 
+
 class AnalyzeResponse(AppBaseModel):
     length: int
     word_count: int

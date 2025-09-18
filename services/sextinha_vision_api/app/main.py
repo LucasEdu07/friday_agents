@@ -6,9 +6,11 @@ from .models import VisionAnalyzeRequest, VisionAnalyzeResponse
 
 app = FastAPI(title="Sextinha Vision API", version="0.1.0")
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "sextinha_vision_api"}
+
 
 @app.post("/vision/analyze", response_model=VisionAnalyzeResponse)
 def vision_analyze(req: VisionAnalyzeRequest):
