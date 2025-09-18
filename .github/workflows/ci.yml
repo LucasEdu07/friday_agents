@@ -1,44 +1,49 @@
-name: CI
+name: CI (ruff, mypy, pytest)
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: [ "main", "develop" ]
+    paths-ignore:
+      - "**/*.md"
+      - "README.md"
+  pull_request:
+    branches: [ "main", "develop" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-type-test:
+  ci:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install deps
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: ".ci/requirements.txt"
+
+      - name: Install deps (CI)
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy pytest fastapi pydantic uvicorn
+          python -m pip install -U pip
+          pip install -r .ci/requirements.txt
 
       - name: Ruff (lint)
-        run: ruff check .
-
-      - name: Type check (mypy)
         run: |
-          set -e
-          ran=0
-          if [ -d packages ]; then
-            echo ">> mypy packages"
-            mypy packages
-            ran=1
-          fi
-          if [ -d services ]; then
-            echo ">> mypy services"
-            mypy services
-            ran=1
-          fi
-          if [ "$ran" -eq 0 ]; then
-            echo ">> mypy skipped (no packages/ or services/ yet)"
-          fi
+          ruff --version
+          ruff check . --output-format=github
 
-      - name: Tests (pytest)
-        run: pytest -q || true
+      - name: Mypy (type check)
+        run: |
+          mypy --version
+          mypy services tests
+
+      - name: Pytest (unit tests)
+        run: |
+          pytest -q

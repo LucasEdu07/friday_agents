@@ -1,0 +1,10 @@
+# Dependências apenas para CI (linters, tipo, testes e libs mínimas usadas no projeto)
+ruff>=0.6.9
+mypy>=1.11.2
+pytest>=8.3.2
+
+# libs de runtime necessárias para imports usados nos serviços e testes
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.8.0
+pillow>=10.4.0
