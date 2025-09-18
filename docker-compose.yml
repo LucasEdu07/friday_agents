@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  text:
+    build:
+      context: .
+      dockerfile: services/sextinha_text_api/Dockerfile
+    image: sextinha-text:dev
+    container_name: sextinha-text
+    environment:
+      - PYTHONPATH=/app
+    ports:
+      - "${TEXT_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  vision:
+    build:
+      context: .
+      dockerfile: services/sextinha_vision_api/Dockerfile
+    image: sextinha-vision:dev
+    container_name: sextinha-vision
+    environment:
+      - PYTHONPATH=/app
+    ports:
+      - "${VISION_PORT:-8001}:8001"
+    restart: unless-stopped
+    depends_on:
+      text:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+networks:
+  default:
