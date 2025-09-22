@@ -1,11 +1,37 @@
-from fastapi import FastAPI
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from services.shared.health import HealthChecker, ProbeStatus
+from services.shared.middleware import TenantMiddleware
+from services.shared.tenant_context import get_current_tenant
 
 from .models import AnalyzeRequest, AnalyzeResponse
 
 app = FastAPI(title="Sextinha Text API", version="0.1.0")
+app.add_middleware(TenantMiddleware)
+
+
+class SextinhaFastAPI(FastAPI):
+    def openapi(self) -> dict[str, Any]:  # mypy-friendly
+        if self.openapi_schema:
+            return self.openapi_schema
+        schema = get_openapi(title=self.title, version=self.version, routes=self.routes)
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})["ApiKeyAuth"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "x-api-key",
+        }
+        for path in schema["paths"].values():
+            for method in path.values():
+                method.setdefault("security", [{"ApiKeyAuth": []}])
+        self.openapi_schema = schema
+        return schema
+
+
+app = SextinhaFastAPI(title="Sextinha Text API", version="1.0")
 
 
 def _count_words(txt: str) -> int:
@@ -50,3 +76,11 @@ async def readiness_probe():
     if ok:
         return payload
     return JSONResponse(status_code=503, content=payload.model_dump())
+
+
+@app.get("/v1/ping")
+def ping():
+    tenant = get_current_tenant()
+    if not tenant:
+        raise HTTPException(status_code=500, detail="Tenant not set in context")
+    return {"message": f"Pong from {tenant.name}"}
