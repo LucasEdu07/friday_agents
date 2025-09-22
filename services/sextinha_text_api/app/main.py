@@ -1,18 +1,14 @@
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from starlette.requests import Request as StarletteRequest
 
 from services.shared.health import HealthChecker, ProbeStatus
 from services.shared.middleware import TenantMiddleware
-from services.shared.tenant_context import get_current_tenant
 
+from .api.v1.router import router as v1_router
 from .models import AnalyzeRequest, AnalyzeResponse
-
-app = FastAPI(title="Sextinha Text API", version="0.1.0")
-app.add_middleware(TenantMiddleware)
 
 
 class SextinhaFastAPI(FastAPI):
@@ -32,7 +28,10 @@ class SextinhaFastAPI(FastAPI):
         return schema
 
 
+# ✅ cria UMA única app, adiciona middleware e registra router v1
 app = SextinhaFastAPI(title="Sextinha Text API", version="1.0")
+app.add_middleware(TenantMiddleware)
+app.include_router(v1_router, prefix="/v1")
 
 
 def _count_words(txt: str) -> int:
@@ -77,26 +76,3 @@ async def readiness_probe():
     if ok:
         return payload
     return JSONResponse(status_code=503, content=payload.model_dump())
-
-
-@app.get("/v1/ping")
-def ping(request: StarletteRequest):  # ✅ usa StarletteRequest
-    tenant = get_current_tenant()
-    if not tenant:
-        api_key = request.headers.get("x-api-key")
-        if not api_key:
-            raise HTTPException(status_code=401, detail="x-api-key is required")
-
-        # Import tardio respeitando monkeypatch e lazy import
-        from services.shared import tenant_repo
-
-        try:
-            resolved = tenant_repo.find_tenant_by_api_key(api_key)
-        except tenant_repo.TenantRepoUnavailable as err:
-            raise HTTPException(status_code=503, detail="Tenant repository unavailable") from err
-
-        if resolved is None:
-            raise HTTPException(status_code=403, detail="Invalid API key")
-        tenant = resolved
-
-    return {"message": f"Pong from {tenant.name}"}
