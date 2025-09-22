@@ -13,6 +13,10 @@ body:
         - vision
         - shared
         - devops
+        - api
+        - security
+        - docs
+        - analytics
     validations:
       required: true
 
