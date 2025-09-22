@@ -39,3 +39,13 @@ pytest -q
 ## 📚 Docs
 - Swagger: `http://127.0.0.1:8080/docs`
 - OpenAPI: `http://127.0.0.1:8080/openapi.json`
+
+## Autenticação (v1)
+As rotas **/v1/** exigem cabeçalho `x-api-key`. Exemplos de tenants seeded:
+
+- `camila123` → Dra. Camila
+- `zeoficina456` → Oficina do Zé
+- `squad789` → Squad Inc
+
+No Swagger (`/docs`), use o botão **Authorize**:
+- **apiKey**: `camila123` (ou outra)
