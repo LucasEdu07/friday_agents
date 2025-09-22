@@ -1,7 +1,8 @@
+# services/shared/tenant_repo.py
+import importlib
 import logging
 import os
-
-import psycopg
+from typing import Any
 
 from .tenant_context import TenantInfo
 
@@ -18,7 +19,16 @@ class TenantRepoUnavailable(Exception):
     pass
 
 
+def _load_psycopg() -> Any:
+    try:
+        return importlib.import_module("psycopg")
+    except Exception as e:
+        # No CI, sem driver: o middleware converte p/ 503 (e nos testes a função é stubada)
+        raise TenantRepoUnavailable("psycopg not installed") from e
+
+
 def find_tenant_by_api_key(api_key: str) -> TenantInfo | None:
+    psycopg = _load_psycopg()  # lazy import (evita ModuleNotFoundError na importação do módulo)
     try:
         with psycopg.connect(DSN) as conn:
             with conn.cursor() as cur:
