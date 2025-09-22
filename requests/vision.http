@@ -1,28 +1,28 @@
-@host = http://localhost:8081 \\Ou 8083
+### Público (gera X-Request-Id)
+GET http://localhost:8002/health
 
-### Vision - Health
-GET {{host}}/health
-
-### Vision - Analyze (base64 válido, não-imagem)
-POST {{host}}/vision/analyze
+### Protegido: sem chave (gera X-Request-Id e volta 401)
+POST http://localhost:8002/v1/vision/analyze
 Content-Type: application/json
 
 {
-  "image_base64": "aGVsbG8gdmJzCg=="
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA..."  // png base64 curto p/ teste
 }
 
-### Vision - Analyze (png 1x1)
-POST {{host}}/vision/analyze
+### Protegido: com chave (propaga X-Request-Id e retorna X-Tenant-Id)
+POST http://localhost:8002/v1/vision/analyze
+X-Api-Key: {{ACME_API_KEY}}
+X-Request-Id: 3c3c3ad3-0d8e-4f7d-8b1e-f45d9f6b9a11
 Content-Type: application/json
 
 {
-  "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/5+BAQACAgEA9lK2WQAAAABJRU5ErkJggg=="
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
 }
 
-### Vision - Analyze (inválido -> 422)
-POST {{host}}/vision/analyze
+### Alias legacy (público, não versionado)
+POST http://localhost:8002/vision/analyze
 Content-Type: application/json
 
 {
-  "image_base64": "###"
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
 }
