@@ -1,20 +1,18 @@
-from pydantic import Field, field_validator
+from typing import Annotated
 
-from services.shared.models import AppBaseModel
+from pydantic import Field, StringConstraints
+
+from services.shared.models import AppBaseModel  # Base com extra="forbid"
+
+# text: strip_whitespace + min_length via StringConstraints (Pydantic v2)
+TextField = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class AnalyzeRequest(AppBaseModel):
-    text: str = Field(..., min_length=1, description="Texto para análise")
-
-    @field_validator("text", mode="before")
-    @classmethod
-    def strip_and_require(cls, v: str) -> str:
-        if not isinstance(v, str):
-            raise TypeError("text must be a string")
-        s = v.strip()
-        if not s:
-            raise ValueError("text cannot be empty or whitespace")
-        return s
+    text: TextField = Field(
+        ...,
+        examples=["Sextinha é braba demais!"],
+    )
 
 
 class AnalyzeResponse(AppBaseModel):

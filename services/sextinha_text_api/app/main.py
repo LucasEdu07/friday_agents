@@ -15,21 +15,57 @@ class SextinhaFastAPI(FastAPI):
     def openapi(self) -> dict[str, Any]:  # mypy-friendly
         if self.openapi_schema:
             return self.openapi_schema
-        schema = get_openapi(title=self.title, version=self.version, routes=self.routes)
-        schema.setdefault("components", {}).setdefault("securitySchemes", {})["ApiKeyAuth"] = {
+
+        schema = get_openapi(
+            title=self.title,
+            version=self.version,
+            description=self.description,
+            routes=self.routes,
+        )
+
+        # Metadados bonitinhos
+        schema.setdefault("info", {}).update(
+            {
+                "contact": {"name": "Friday Agents", "url": "https://example.com"},
+                "license": {"name": "MIT"},
+            }
+        )
+        # Tag order opcional (v1 primeiro, ops depois)
+        schema["tags"] = [{"name": "v1"}, {"name": "ops"}]
+
+        # Security scheme: ApiKeyAuth via header x-api-key
+        comps = schema.setdefault("components", {})
+        comps.setdefault("securitySchemes", {})["ApiKeyAuth"] = {
             "type": "apiKey",
             "in": "header",
             "name": "x-api-key",
         }
-        for path in schema["paths"].values():
-            for method in path.values():
-                method.setdefault("security", [{"ApiKeyAuth": []}])
+
+        # Exigir API key apenas nas rotas /v1/*
+        for path, path_item in schema.get("paths", {}).items():
+            is_v1 = path.startswith("/v1/")
+            for method_obj in path_item.values():
+                if not isinstance(method_obj, dict):
+                    continue
+                if is_v1:
+                    method_obj.setdefault("security", [{"ApiKeyAuth": []}])
+                else:
+                    # Garante públicas (readiness, docs, analyze)
+                    if "security" in method_obj:
+                        method_obj.pop("security", None)
+
         self.openapi_schema = schema
         return schema
 
+    # ✅ cria uma única app com swagger que persiste autorização
 
-# ✅ cria UMA única app, adiciona middleware e registra router v1
-app = SextinhaFastAPI(title="Sextinha Text API", version="1.0")
+
+app = SextinhaFastAPI(
+    title="Sextinha Text API",
+    version="1.0",
+    description="API de exemplo do Sextinha Text (multi-tenant por x-api-key).",
+    swagger_ui_parameters={"persistAuthorization": True, "displayRequestDuration": True},
+)
 app.add_middleware(TenantMiddleware)
 app.include_router(v1_router, prefix="/v1")
 
