@@ -1,9 +1,9 @@
 from typing import Any
-from urllib.request import Request
 
 from fastapi import FastAPI, HTTPException
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from starlette.requests import Request as StarletteRequest
 
 from services.shared.health import HealthChecker, ProbeStatus
 from services.shared.middleware import TenantMiddleware
@@ -80,16 +80,14 @@ async def readiness_probe():
 
 
 @app.get("/v1/ping")
-def ping(request: Request):
+def ping(request: StarletteRequest):  # ✅ usa StarletteRequest
     tenant = get_current_tenant()
     if not tenant:
-        # Fallback: se o middleware não injetou o tenant (ex.: coleta de testes),
-        # o endpoint mesmo valida o header e resolve o tenant.
         api_key = request.headers.get("x-api-key")
         if not api_key:
             raise HTTPException(status_code=401, detail="x-api-key is required")
 
-        # Import tardio para respeitar o monkeypatch nos testes e o lazy import do psycopg
+        # Import tardio respeitando monkeypatch e lazy import
         from services.shared import tenant_repo
 
         try:
