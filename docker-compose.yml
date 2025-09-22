@@ -1,6 +1,20 @@
-# (sem a chave "version:" no topo)
-
+# docker-compose.yml  (sem "version", ok)
 services:
+
+  db:
+    image: postgres:16
+    container_name: sextinha-db
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=friday_agents
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d friday_agents"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   text:
     build:
       context: .
@@ -8,12 +22,15 @@ services:
     image: sextinha-text:dev
     container_name: sextinha-text
     environment:
-      - PYTHONPATH=/app
+      # 👉 aponta para o serviço interno "db"
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/friday_agents
     ports:
-      - "${TEXT_PORT:-8000}:8000"
+      - "${TEXT_PORT:-8081}:8000"
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
-      # troca /health -> /readiness
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/readiness || exit 1"]
       interval: 10s
       timeout: 3s
@@ -35,7 +52,6 @@ services:
       text:
         condition: service_healthy
     healthcheck:
-      # troca /health -> /readiness
       test: ["CMD-SHELL", "curl -fsS http://localhost:8001/readiness || exit 1"]
       interval: 10s
       timeout: 3s
@@ -45,3 +61,7 @@ services:
 networks:
   default:
     name: sextinha-net
+
+# 🔧 AQUI ESTÁ O QUE FALTAVA
+volumes:
+  pgdata:

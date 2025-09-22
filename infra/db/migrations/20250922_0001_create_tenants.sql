@@ -1,4 +1,3 @@
--- Create table: tenants
 CREATE TABLE IF NOT EXISTS tenants (
   id        TEXT PRIMARY KEY,            -- use UUID em texto
   name      TEXT NOT NULL,
