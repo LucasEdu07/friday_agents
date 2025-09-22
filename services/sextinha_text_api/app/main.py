@@ -1,4 +1,5 @@
 from typing import Any
+from urllib.request import Request
 
 from fastapi import FastAPI, HTTPException
 from fastapi.openapi.utils import get_openapi
@@ -79,8 +80,25 @@ async def readiness_probe():
 
 
 @app.get("/v1/ping")
-def ping():
+def ping(request: Request):
     tenant = get_current_tenant()
     if not tenant:
-        raise HTTPException(status_code=500, detail="Tenant not set in context")
+        # Fallback: se o middleware não injetou o tenant (ex.: coleta de testes),
+        # o endpoint mesmo valida o header e resolve o tenant.
+        api_key = request.headers.get("x-api-key")
+        if not api_key:
+            raise HTTPException(status_code=401, detail="x-api-key is required")
+
+        # Import tardio para respeitar o monkeypatch nos testes e o lazy import do psycopg
+        from services.shared import tenant_repo
+
+        try:
+            resolved = tenant_repo.find_tenant_by_api_key(api_key)
+        except tenant_repo.TenantRepoUnavailable as err:
+            raise HTTPException(status_code=503, detail="Tenant repository unavailable") from err
+
+        if resolved is None:
+            raise HTTPException(status_code=403, detail="Invalid API key")
+        tenant = resolved
+
     return {"message": f"Pong from {tenant.name}"}
