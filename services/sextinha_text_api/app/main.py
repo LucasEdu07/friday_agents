@@ -1,9 +1,12 @@
+import os
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
+from services.shared.config_loader import reload_all_configs
+from services.shared.config_provisioner import sync_from_db
 from services.shared.health import HealthChecker, ProbeStatus
 from services.shared.middleware import RequestIdMiddleware, TenantMiddleware
 
@@ -29,7 +32,7 @@ class SextinhaFastAPI(FastAPI):
                 "license": {"name": "MIT"},
             }
         )
-        schema["tags"] = [{"name": "v1"}, {"name": "ops"}]
+        schema["tags"] = [{"name": "v1"}, {"name": "ops"}, {"name": "admin"}]
 
         comps = schema.setdefault("components", {})
         comps.setdefault("securitySchemes", {})["ApiKeyAuth"] = {
@@ -52,20 +55,19 @@ class SextinhaFastAPI(FastAPI):
         return schema
 
 
-# ✅ instância única do app
 app = SextinhaFastAPI(
     title="Sextinha Text API",
     version="1.0",
-    description="API de exemplo do Sextinha Text (multi-tenant por x-api-key).",
+    description="API do Sextinha Text (multi-tenant por x-api-key).",
     swagger_ui_parameters={"persistAuthorization": True, "displayRequestDuration": True},
 )
 
-# ✅ ORDEM IMPORTA: RequestId antes do Tenant
+# middlewares (ordem importa)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(TenantMiddleware)
 
-# ✅ rotas versionadas
-app.include_router(v1_router, prefix="/v1")
+# ✅ o router JÁ tem prefix="/v1", então não repetir aqui
+app.include_router(v1_router, tags=["v1"])
 
 
 def _count_words(txt: str) -> int:
@@ -84,7 +86,6 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     return AnalyzeResponse(length=length, word_count=word_count, preview=preview)
 
 
-# --- health/readiness padronizados ---
 checker = HealthChecker(service_name="sextinha_text_api")
 
 
@@ -99,13 +100,36 @@ async def health_probe() -> ProbeStatus:
 
 
 @app.get(
-    "/readiness",
-    response_model=ProbeStatus,
-    responses={503: {"model": ProbeStatus}},
-    tags=["ops"],
+    "/readiness", response_model=ProbeStatus, responses={503: {"model": ProbeStatus}}, tags=["ops"]
 )
 async def readiness_probe():
     ok, payload = await checker.readiness()
     if ok:
         return payload
     return JSONResponse(status_code=503, content=payload.model_dump())
+
+
+admin = APIRouter(tags=["admin"])
+
+
+def _dev_only() -> bool:
+    return os.getenv("ENV", "dev") == "dev"
+
+
+@admin.post("/admin/reload-config")
+def reload_configs():
+    if not _dev_only():
+        return JSONResponse({"detail": "disabled"}, status_code=403)
+    reload_all_configs()
+    return {"reloaded": True}
+
+
+@admin.post("/admin/sync-configs")
+def sync_configs():
+    if not _dev_only():
+        return JSONResponse({"detail": "disabled"}, status_code=403)
+    n = sync_from_db(overwrite=False)
+    return {"synced": n}
+
+
+app.include_router(admin)
