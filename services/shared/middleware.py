@@ -89,7 +89,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         def respond(status: int, payload: dict) -> Response:
-            return _attach_headers(JSONResponse(payload, status_code=status), request_id=req_id)
+            resp = JSONResponse(payload, status_code=status)
+            return _attach_headers(resp, request_id=req_id)
 
         if (
             request.method == "OPTIONS"
