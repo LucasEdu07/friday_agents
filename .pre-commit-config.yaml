@@ -27,6 +27,7 @@ repos:
           - types-Pillow
           - pydantic>=2.8.0
           - fastapi>=0.115.0
+          - types-PyYAML
 
   # Hooks utilitários
   - repo: https://github.com/pre-commit/pre-commit-hooks

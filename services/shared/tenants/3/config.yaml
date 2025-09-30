@@ -1,0 +1,21 @@
+{
+  "name": "Squad Inc",
+  "features": {
+    "enable_text": true,
+    "enable_vision": true,
+    "enable_ocr": false
+  },
+  "limits": {
+    "max_input_tokens": 4096,
+    "max_output_tokens": 1024,
+    "max_images_per_request": 4
+  },
+  "models": {
+    "text_model": "gpt-4o-mini",
+    "vision_model": "gpt-4o",
+    "ocr_model": "tesseract"
+  },
+  "cors": {
+    "origins": []
+  }
+}
