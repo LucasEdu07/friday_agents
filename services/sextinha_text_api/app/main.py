@@ -1,3 +1,4 @@
+# services/sextinha_text_api/app/main.py
 import os
 from typing import Any
 
@@ -8,6 +9,8 @@ from fastapi.responses import JSONResponse
 from services.shared.config_loader import reload_all_configs
 from services.shared.config_provisioner import sync_from_db
 from services.shared.health import HealthChecker, ProbeStatus
+from services.shared.middleware.cors import CORSMiddlewarePerTenant
+from services.shared.middleware.rate_limit import RateLimitMiddlewarePerTenant
 from services.shared.middleware_utils import RequestIdMiddleware, TenantMiddleware
 
 from .api.v1.router import router as v1_router
@@ -62,12 +65,18 @@ app = SextinhaFastAPI(
     swagger_ui_parameters={"persistAuthorization": True, "displayRequestDuration": True},
 )
 
-app.add_middleware(RequestIdMiddleware)
-app.add_middleware(TenantMiddleware)
+# ORDEM IMPORTA (o último adicionado roda primeiro / outermost):
+# Queremos: RequestId (outermost) -> Tenant -> RateLimit -> CORS (innermost)
+app.add_middleware(CORSMiddlewarePerTenant)  # innermost
+app.add_middleware(RateLimitMiddlewarePerTenant)  # entre Tenant e CORS
+app.add_middleware(TenantMiddleware)  # middle
+app.add_middleware(RequestIdMiddleware)  # outermost
 
+# Rotas v1
 app.include_router(v1_router, tags=["v1"])
 
 
+# --- rotas auxiliares/ops ---
 def _count_words(txt: str) -> int:
     import re
 

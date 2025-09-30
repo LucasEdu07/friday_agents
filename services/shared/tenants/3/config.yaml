@@ -1,21 +1,37 @@
-{
-  "name": "Squad Inc",
-  "features": {
-    "enable_text": true,
-    "enable_vision": true,
-    "enable_ocr": false
-  },
-  "limits": {
-    "max_input_tokens": 4096,
-    "max_output_tokens": 1024,
-    "max_images_per_request": 4
-  },
-  "models": {
-    "text_model": "gpt-4o-mini",
-    "vision_model": "gpt-4o",
-    "ocr_model": "tesseract"
-  },
-  "cors": {
-    "origins": []
-  }
-}
+name: "Squad Inc"
+
+features:
+  enable_text: true
+  enable_vision: true
+  enable_ocr: false
+
+limits:
+  max_input_tokens: 4096
+  max_output_tokens: 1024
+  max_images_per_request: 4
+
+models:
+  text_model: "gpt-4o-mini"
+  vision_model: "gpt-4o"
+  ocr_model: "tesseract"
+
+cors:
+  origins:
+    - "https://app.squad.inc"
+    - "https://console.squad.inc"
+    - "http://localhost:4200"
+
+rate_limit:
+  default:
+    rpm: 100
+    burst: 200
+  routes:
+    "/v1/ping":
+      rpm: 60
+      burst: 120
+    "/v1/text/analyze":
+      rpm: 50
+      burst: 100
+    "/v1/vision/analyze":
+      rpm: 25
+      burst: 50
