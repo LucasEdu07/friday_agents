@@ -64,10 +64,7 @@ def _to_tenant_info(tenant_obj: object) -> TenantInfo:
 
 
 def _attach_headers(
-    response: Response,
-    *,
-    request_id: str,
-    tenant_id: str | None = None,
+    response: Response, *, request_id: str, tenant_id: str | None = None
 ) -> Response:
     response.headers[REQUEST_ID_HEADER] = request_id
     if tenant_id:
@@ -76,11 +73,6 @@ def _attach_headers(
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
-    """
-    - Gera/propaga X-Request-Id para todas as requisições.
-    - Injeta X-Request-Id em TODAS as respostas (incluindo 4xx/5xx).
-    """
-
     async def dispatch(self, request: Request, call_next):
         req_id = _ensure_request_id(request)
         response: Response = await call_next(request)

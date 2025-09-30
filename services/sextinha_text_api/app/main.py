@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from services.shared.config_loader import reload_all_configs
 from services.shared.config_provisioner import sync_from_db
 from services.shared.health import HealthChecker, ProbeStatus
-from services.shared.middleware import RequestIdMiddleware, TenantMiddleware
+from services.shared.middleware_utils import RequestIdMiddleware, TenantMiddleware
 
 from .api.v1.router import router as v1_router
 from .models import AnalyzeRequest, AnalyzeResponse

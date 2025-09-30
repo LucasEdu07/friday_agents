@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from services.shared.health import HealthChecker, ProbeStatus
-from services.shared.middleware import RequestIdMiddleware, TenantMiddleware
+from services.shared.middleware_utils import RequestIdMiddleware, TenantMiddleware
 
 from .models import VisionAnalyzeRequest, VisionAnalyzeResponse
 
