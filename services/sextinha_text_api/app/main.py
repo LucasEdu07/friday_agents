@@ -62,11 +62,9 @@ app = SextinhaFastAPI(
     swagger_ui_parameters={"persistAuthorization": True, "displayRequestDuration": True},
 )
 
-# middlewares (ordem importa)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(TenantMiddleware)
 
-# ✅ o router JÁ tem prefix="/v1", então não repetir aqui
 app.include_router(v1_router, tags=["v1"])
 
 
