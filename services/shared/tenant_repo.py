@@ -1,46 +1,78 @@
 # services/shared/tenant_repo.py
-import importlib
-import logging
+from __future__ import annotations
+
 import os
-from typing import Any
+from typing import TypedDict
 
-from .tenant_context import TenantInfo
+import psycopg
 
-logger = logging.getLogger("tenant_repo")
 
-DSN = (
-    os.getenv("DATABASE_URL")
-    or os.getenv("DB_URL")
-    or "postgresql://postgres:postgres@localhost:5432/friday_agents"
-)
+class TenantRow(TypedDict):
+    tenant_id: int
+    name: str
 
 
 class TenantRepoUnavailable(Exception):
     pass
 
 
-def _load_psycopg() -> Any:
+DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+
+# Fallback hardcoded usado em dev/test quando não há DB
+_FALLBACK_TENANTS: list[TenantRow] = [
+    {"tenant_id": 1, "name": "Dra. Camila"},
+    {"tenant_id": 2, "name": "Oficina do Zé"},
+    {"tenant_id": 3, "name": "Squad Inc"},
+]
+_FALLBACK_API_KEYS = {
+    "camila123": _FALLBACK_TENANTS[0],
+    "zeoficina456": _FALLBACK_TENANTS[1],
+    "squad789": _FALLBACK_TENANTS[2],
+}
+
+
+def list_all_tenants() -> list[TenantRow]:
+    """
+    Se DATABASE_URL não estiver definido, devolve o fallback local (3 tenants).
+    Com DB, lê da tabela tenants (id, name).
+    """
+    if not DATABASE_URL:
+        return list(_FALLBACK_TENANTS)
+
     try:
-        return importlib.import_module("psycopg")
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("select id as tenant_id, name from tenants order by id;")
+                rows = cur.fetchall()
+                return [{"tenant_id": r[0], "name": r[1]} for r in rows]
     except Exception as e:
-        # No CI, sem driver: o middleware converte p/ 503 (e nos testes a função é stubada)
-        raise TenantRepoUnavailable("psycopg not installed") from e
+        raise TenantRepoUnavailable() from e
 
 
-def find_tenant_by_api_key(api_key: str) -> TenantInfo | None:
-    psycopg = _load_psycopg()  # lazy import (evita ModuleNotFoundError na importação do módulo)
+def find_tenant_by_api_key(api_key: str) -> TenantRow | None:
+    """
+    Se DATABASE_URL não estiver definido, usa o fallback local de api_keys.
+    Com DB, consulta join api_keys -> tenants.
+    """
+    if not DATABASE_URL:
+        return _FALLBACK_API_KEYS.get(api_key)
+
     try:
-        with psycopg.connect(DSN) as conn:
+        with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, name, api_key, status FROM tenants "
-                    "WHERE api_key = %s AND status = 'active' LIMIT 1",
+                    """
+                    select t.id, t.name
+                      from api_keys k
+                      join tenants t on t.id = k.tenant_id
+                     where k.key = %s
+                     limit 1;
+                    """,
                     (api_key,),
                 )
                 row = cur.fetchone()
-                if row:
-                    return TenantInfo(id=row[0], name=row[1], api_key=row[2], status=row[3])
-                return None
+                if not row:
+                    return None
+                return {"tenant_id": row[0], "name": row[1]}
     except Exception as e:
-        logger.exception("DB error while fetching tenant by api_key")
-        raise TenantRepoUnavailable from e
+        raise TenantRepoUnavailable() from e
