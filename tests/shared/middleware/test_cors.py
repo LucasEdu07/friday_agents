@@ -1,3 +1,4 @@
+# tests/shared/middleware/test_cors.py
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -7,9 +8,11 @@ from starlette.types import ASGIApp
 from services.shared.middleware.cors import CORSMiddlewarePerTenant
 
 
-# 🔧 Middleware fake para simular o tenant resolvido antes
+# 🔧 Middleware fake para simular o tenant resolvido antes do CORS
 class FakeTenant:
     def __init__(self, config: dict):
+        self.id = "test-tenant"
+        self.name = "Test Tenant"
         self.config = config
 
 
@@ -19,7 +22,10 @@ class FakeTenantMiddleware(BaseHTTPMiddleware):
         self.tenant_config = tenant_config
 
     async def dispatch(self, request: Request, call_next):
-        request.state.tenant = FakeTenant(self.tenant_config)
+        tenant = FakeTenant(self.tenant_config)
+        # setamos nos dois lugares que o CORS consulta
+        request.state.tenant = tenant
+        request.state.tenant_config = tenant.config
         return await call_next(request)
 
 
@@ -27,12 +33,12 @@ class FakeTenantMiddleware(BaseHTTPMiddleware):
 def make_app(tenant_config: dict) -> TestClient:
     app = FastAPI()
 
-    # registra CORS primeiro (interna)
+    # IMPORTANTE: o último adicionado roda primeiro (outermost).
+    # Queremos que o FakeTenant rode ANTES do CORS -> então adicionamos CORS antes.
     app.add_middleware(CORSMiddlewarePerTenant)
-    # registra FakeTenant por último (externa) — ele será executado antes do CORS
     app.add_middleware(FakeTenantMiddleware, tenant_config=tenant_config)
 
-    @app.get("/teste")
+    @app.get("/v1/teste")
     def route():
         return {"ok": True}
 
@@ -42,7 +48,7 @@ def make_app(tenant_config: dict) -> TestClient:
 def test_valid_origin_allows_request():
     client = make_app({"cors": {"origins": ["https://valido.com"]}})
 
-    response = client.get("/teste", headers={"Origin": "https://valido.com"})
+    response = client.get("/v1/teste", headers={"Origin": "https://valido.com"})
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
@@ -53,7 +59,7 @@ def test_valid_origin_allows_request():
 def test_invalid_origin_is_blocked():
     client = make_app({"cors": {"origins": ["https://valido.com"]}})
 
-    response = client.get("/teste", headers={"Origin": "https://malicioso.com"})
+    response = client.get("/v1/teste", headers={"Origin": "https://malicioso.com"})
 
     assert response.status_code == 403
     assert response.json()["detail"] == "CORS origin não permitida"
@@ -63,7 +69,7 @@ def test_preflight_options_request_passes_for_valid_origin():
     client = make_app({"cors": {"origins": ["https://valido.com"]}})
 
     response = client.options(
-        "/teste",
+        "/v1/teste",
         headers={
             "Origin": "https://valido.com",
             "Access-Control-Request-Method": "GET",

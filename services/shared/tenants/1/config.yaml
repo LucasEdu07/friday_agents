@@ -1,21 +1,36 @@
-{
-  "name": "Dra. Camila",
-  "features": {
-    "enable_text": true,
-    "enable_vision": true,
-    "enable_ocr": false
-  },
-  "limits": {
-    "max_input_tokens": 4096,
-    "max_output_tokens": 1024,
-    "max_images_per_request": 4
-  },
-  "models": {
-    "text_model": "gpt-4o-mini",
-    "vision_model": "gpt-4o",
-    "ocr_model": "tesseract"
-  },
-  "cors": {
-    "origins": []
-  }
-}
+name: "Dra. Camila"
+
+features:
+  enable_text: true
+  enable_vision: true
+  enable_ocr: false
+
+limits:
+  max_input_tokens: 4096
+  max_output_tokens: 1024
+  max_images_per_request: 4
+
+models:
+  text_model: "gpt-4o-mini"
+  vision_model: "gpt-4o"
+  ocr_model: "tesseract"
+
+cors:
+  origins:
+    - "https://app.dra-camila.com.br"
+    - "http://localhost:3000"
+
+rate_limit:
+  default:
+    rpm: 5        # 60 req/min como base
+    burst: 5     # picos de até 120/min
+  routes:
+    "/v1/ping":
+      rpm: 2
+      burst: 2
+    "/v1/text/analyze":
+      rpm: 20
+      burst: 40
+    "/v1/vision/analyze":
+      rpm: 10
+      burst: 20
