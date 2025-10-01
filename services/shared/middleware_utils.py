@@ -9,6 +9,7 @@ from starlette.responses import JSONResponse, Response
 
 from . import tenant_repo
 from .config_loader import load_config
+from .logging_utils import get_logger
 from .tenant_context import TenantInfo, set_current_tenant
 
 REQUEST_ID_HEADER: Final[str] = "X-Request-Id"
@@ -82,7 +83,8 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 class TenantMiddleware(BaseHTTPMiddleware):
     SAFE_PATHS = {"/", "/openapi.json", "/readiness", "/health", "/healthz"}
     SAFE_PREFIXES = ("/docs", "/redoc", "/static")
-    OPEN_V1: set[str] = set()
+    OPEN_V1: set[str] = set()  # se quiser rotas /v1/* sem x-api-key, adicione aqui
+    _log = get_logger("access")
 
     async def dispatch(self, request: Request, call_next):
         req_id = _ensure_request_id(request)
@@ -92,6 +94,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             resp = JSONResponse(payload, status_code=status)
             return _attach_headers(resp, request_id=req_id)
 
+        # Bypasses (docs, health, OPTIONS, etc.)
         if (
             request.method == "OPTIONS"
             or path in self.SAFE_PATHS
@@ -100,6 +103,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             resp = await call_next(request)
             return _attach_headers(resp, request_id=req_id)
 
+        # Só exigimos x-api-key em /v1/* (a menos que a rota esteja liberada em OPEN_V1)
         if not path.startswith("/v1/") or path in self.OPEN_V1:
             resp = await call_next(request)
             return _attach_headers(resp, request_id=req_id)
@@ -108,9 +112,16 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if not api_key:
             return respond(401, {"detail": "x-api-key is required"})
 
+        # Resolve tenant (compat com testes: prioriza find_tenant_by_api_key se existir)
+        resolver = getattr(
+            tenant_repo,
+            "find_tenant_by_api_key",
+            tenant_repo.resolve_tenant_by_api_key,
+        )
         try:
-            tenant_row = tenant_repo.find_tenant_by_api_key(api_key)
+            tenant_row = resolver(api_key)
         except tenant_repo.TenantRepoUnavailable:
+            self._log.error("tenant.repo_unavailable", extra={"path": str(request.url.path)})
             return respond(503, {"detail": "Tenant repository unavailable"})
 
         if tenant_row is None:
@@ -118,6 +129,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         tenant_info = _to_tenant_info(tenant_row)
 
+        # Carrega config do tenant (yaml). Se não existir, tenta provisionar via DB -> disco.
         try:
             config = load_config(tenant_info.id)
         except FileNotFoundError:
@@ -127,8 +139,10 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 sync_from_db(overwrite=False)
                 config = load_config(tenant_info.id)
             except Exception:
+                self._log.error("tenant.config_unavailable", extra={"path": str(request.url.path)})
                 return respond(503, {"detail": "Tenant config not available"})
 
+        # injeta no request e no contexto
         request.state.tenant = tenant_info
         request.state.tenant_config = config
         set_current_tenant(tenant_info)

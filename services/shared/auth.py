@@ -1,78 +1,43 @@
 # services/shared/auth.py
 from __future__ import annotations
 
-from fastapi import HTTPException, Request, Security
-from fastapi.security.api_key import APIKeyHeader
+import base64
+import hashlib
+from typing import Final
 
-from . import tenant_repo
-from .tenant_context import TenantInfo
-
-# Define o esquema de segurança para o OpenAPI e para as rotas /v1
-_api_key_header = APIKeyHeader(name="x-api-key", auto_error=True)
+# Algoritmo suportado (mapeado ao campo `algo` da tabela)
+ALGO_PBKDF2_SHA256: Final[str] = "pbkdf2_sha256"
 
 
-def _to_tenant_info(tenant_obj: object) -> TenantInfo:
-    def pick(*names: str) -> str | None:
-        for n in names:
-            if hasattr(tenant_obj, n):
-                v = getattr(tenant_obj, n)
-                if v:
-                    return str(v)
-        return None
-
-    tid = pick("tenant_id", "id")
-    name = pick("name")
-    slug = pick("slug")
-    api_key = pick("api_key", "key") or ""
-    status = pick("status") or "active"
-
-    if not tid:
-        tid = slug or name or "unknown"
-
-    display_name = name or slug or tid
-
-    return TenantInfo(
-        id=str(tid),
-        name=str(display_name),
-        api_key=str(api_key),
-        status=str(status),
-    )
-
-
-def require_api_key(request: Request) -> TenantInfo:
+def _pbkdf2_sha256(token: str, salt_b64: str, iterations: int) -> str:
     """
-    Lê x-api-key diretamente do Request.headers, resolve e retorna TenantInfo.
-    Útil quando você não precisa do 'security' no OpenAPI.
+    Deriva o hash PBKDF2-HMAC-SHA256 do `token` usando `iterations` e `salt_b64`.
+    Retorna o hash em Base64 (compatível com o campo `hash_b64`).
     """
-    api_key = request.headers.get("x-api-key")
-    if not api_key:
-        raise HTTPException(status_code=401, detail="x-api-key is required")
-
-    try:
-        tenant_row = tenant_repo.find_tenant_by_api_key(api_key)
-    except tenant_repo.TenantRepoUnavailable as err:
-        raise HTTPException(status_code=503, detail="Tenant repository unavailable") from err
-
-    if tenant_row is None:
-        raise HTTPException(status_code=403, detail="Invalid API key")
-
-    return _to_tenant_info(tenant_row)
+    salt = base64.b64decode(salt_b64)
+    dk = hashlib.pbkdf2_hmac("sha256", token.encode("utf-8"), salt, iterations)
+    return base64.b64encode(dk).decode("ascii")
 
 
-async def require_tenant(api_key: str = Security(_api_key_header)) -> TenantInfo:
+def verify_token(
+    token: str,
+    *,
+    algo: str,
+    iterations: int,
+    salt_b64: str,
+    hash_b64: str,
+) -> bool:
     """
-    Dependência para ser usada no router (dependencies=[...]) ou nos endpoints.
-    Usa Security(APIKeyHeader) para:
-      - validar a x-api-key
-      - e fazer o OpenAPI incluir 'security' nas rotas /v1
-    Retorna TenantInfo.
+    Verifica se `token` corresponde ao par (algo, iterations, salt_b64, hash_b64).
+
+    Hoje suportamos explicitamente `pbkdf2_sha256`, alinhado ao seu schema.
+    Caso no futuro haja novos algoritmos (ex.: argon2), adicione aqui.
     """
-    try:
-        tenant_row = tenant_repo.find_tenant_by_api_key(api_key)
-    except tenant_repo.TenantRepoUnavailable as err:
-        raise HTTPException(status_code=503, detail="Tenant repository unavailable") from err
+    if algo != ALGO_PBKDF2_SHA256:
+        # Algoritmo desconhecido: considere não-autorizado
+        return False
 
-    if tenant_row is None:
-        raise HTTPException(status_code=403, detail="Invalid API key")
-
-    return _to_tenant_info(tenant_row)
+    derived_b64 = _pbkdf2_sha256(token, salt_b64=salt_b64, iterations=iterations)
+    # Comparação constante não é crítica aqui (já há PBKDF2), mas pode-se usar
+    # secrets.compare_digest se preferir.
+    return derived_b64 == hash_b64
