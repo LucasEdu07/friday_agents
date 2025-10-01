@@ -22,15 +22,10 @@ services:
     image: sextinha-text:dev
     container_name: sextinha-text
     environment:
-      - ENV=dev
+      # 👉 aponta para o serviço interno "db"
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/friday_agents
     ports:
       - "${TEXT_PORT:-8081}:8000"
-    command: >
-      uvicorn services.sextinha_text_api.app.main:app
-      --host 0.0.0.0 --port 8000
-      --workers 1
-      --no-access-log
     restart: unless-stopped
     depends_on:
       db:
