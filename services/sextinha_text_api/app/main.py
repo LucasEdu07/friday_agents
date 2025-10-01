@@ -13,6 +13,7 @@ from services.shared.middleware.cors import CORSMiddlewarePerTenant
 from services.shared.middleware.rate_limit import RateLimitMiddlewarePerTenant
 from services.shared.middleware_utils import RequestIdMiddleware, TenantMiddleware
 
+from ...shared.app_middleware import apply_middlewares
 from .api.v1.router import router as v1_router
 from .models import AnalyzeRequest, AnalyzeResponse
 
@@ -73,6 +74,7 @@ app.add_middleware(TenantMiddleware)  # middle
 app.add_middleware(RequestIdMiddleware)  # outermost
 
 # Rotas v1
+apply_middlewares(app)
 app.include_router(v1_router, tags=["v1"])
 
 
