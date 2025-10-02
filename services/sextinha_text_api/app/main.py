@@ -14,6 +14,7 @@ from services.shared.middleware.rate_limit import RateLimitMiddlewarePerTenant
 from services.shared.middleware_utils import RequestIdMiddleware, TenantMiddleware
 
 from ...shared.app_middleware import apply_middlewares
+from .admin.dev_router import router as admin_dev_router
 from .api.v1.router import router as v1_router
 from .models import AnalyzeRequest, AnalyzeResponse
 
@@ -142,3 +143,5 @@ def sync_configs():
 
 
 app.include_router(admin)
+
+app.include_router(admin_dev_router)
