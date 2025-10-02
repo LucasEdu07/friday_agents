@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS tenants (
-  id        TEXT PRIMARY KEY,            -- use UUID em texto
+  id        TEXT PRIMARY KEY,
   name      TEXT NOT NULL,
   api_key   TEXT NOT NULL UNIQUE,
   status    TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
