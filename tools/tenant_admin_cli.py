@@ -1,80 +1,94 @@
 from __future__ import annotations
 
+import json
 import os
+from typing import Any
+
 import typer
-from typing import Optional
 
-from services.shared.key_service import create_key, rotate_key, revoke_key, list_keys
-from services.shared import tenant_repo
+from services.shared.key_service import create_key, list_keys, revoke_key, rotate_key
+from services.shared.tenant_repo import list_all_tenants
 
-app = typer.Typer(help="Admin CLI (DEV) para tenants e chaves. Usa DATABASE_URL.")
+app = typer.Typer(help="Tenant admin CLI (dev only).")
 
 
-def _require_dev() -> None:
-    env = os.getenv("ENV", "").strip().lower()
-    flag = os.getenv("ADMIN_ROUTES_ENABLED", "").strip().lower()
-    if env == "dev" or flag in {"1", "true", "yes", "on"}:
-        return
-    typer.secho("Admin CLI bloqueado fora de dev (use ENV=dev ou ADMIN_ROUTES_ENABLED=true)", fg=typer.colors.RED)
-    raise typer.Exit(code=2)
+def _ensure_dev() -> None:
+    """Garante que só roda em ambiente dev, senão aborta."""
+    if os.getenv("ENV") not in {"dev", "development", "local"}:
+        typer.echo("This CLI is only allowed in ENV=dev.")
+        raise typer.Exit(1)
 
 
 @app.command("tenants-list")
 def tenants_list() -> None:
-    _require_dev()
-    rows = tenant_repo.list_all_tenants()
-    for r in rows:
-        typer.echo(f"{r['tenant_id']}\t{r['name']}")
+    """Lista tenants que possuem pelo menos uma API key ativa."""
+    _ensure_dev()
+    rows = list_all_tenants()
+    typer.echo(json.dumps(rows, indent=2, ensure_ascii=False))
 
 
 @app.command("keys-list")
 def keys_list(tenant_id: str = typer.Argument(..., help="Tenant ID")) -> None:
-    _require_dev()
+    """Lista chaves ativas de um tenant."""
+    _ensure_dev()
     rows = list_keys(tenant_id)
-    for r in rows:
-        status = "revoked" if r.revoked_at else "active"
-        typer.echo(f"{r.name}\t{status}")
+    typer.echo(json.dumps(rows, indent=2, ensure_ascii=False))
 
 
 @app.command("keys-create")
 def keys_create(
     tenant_id: str = typer.Argument(..., help="Tenant ID"),
-    name: Optional[str] = typer.Option(None, help="Nome amigável (opcional)"),
+    name: str | None = typer.Option(
+        None,
+        "--name",
+        "-n",
+        help="Nome da chave (opcional; será gerado se não informado).",
+    ),
 ) -> None:
-    _require_dev()
-    name_out, api_key_plain = create_key(tenant_id, name=name)
-    # MOSTRA apenas uma vez no terminal (não log persistente)
-    typer.secho("==== API KEY GERADA ====", fg=typer.colors.GREEN)
-    typer.echo(f"tenant: {tenant_id}")
-    typer.echo(f"name:   {name_out}")
-    typer.echo(f"key:    {api_key_plain}")
+    """Cria uma nova chave para o tenant."""
+    _ensure_dev()
+    created_name, api_key_plain = create_key(tenant_id, name=name)
+    out: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "name": created_name,
+        "api_key_plain": api_key_plain,
+    }
+    typer.echo(json.dumps(out, indent=2, ensure_ascii=False))
 
 
 @app.command("keys-rotate")
 def keys_rotate(
     tenant_id: str = typer.Argument(..., help="Tenant ID"),
-    previous_name: Optional[str] = typer.Option(None, help="Nome da chave anterior (opcional)"),
-    new_name: Optional[str] = typer.Option(None, help="Nome da nova chave (opcional)"),
+    previous_name: str | None = typer.Option(
+        None, "--previous-name", help="Nome da chave anterior a ser revogada."
+    ),
+    new_name: str | None = typer.Option(
+        None, "--new-name", help="Nome da nova chave (opcional)."
+    ),
 ) -> None:
-    _require_dev()
-    name_out, api_key_plain = rotate_key(tenant_id, previous_name=previous_name, new_name=new_name)
-    typer.secho("==== API KEY ROTACIONADA ====", fg=typer.colors.GREEN)
-    typer.echo(f"tenant: {tenant_id}")
-    typer.echo(f"name:   {name_out}")
-    typer.echo(f"key:    {api_key_plain}")
+    """Rotaciona chave: revoga a anterior e cria uma nova."""
+    _ensure_dev()
+    created_name, api_key_plain = rotate_key(
+        tenant_id, previous_name=previous_name, new_name=new_name
+    )
+    out: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "name": created_name,
+        "api_key_plain": api_key_plain,
+    }
+    typer.echo(json.dumps(out, indent=2, ensure_ascii=False))
 
 
 @app.command("keys-revoke")
 def keys_revoke(
     tenant_id: str = typer.Argument(..., help="Tenant ID"),
-    name: str = typer.Argument(..., help="Nome da chave a revogar"),
+    name: str = typer.Option(..., "--name", "-n", help="Nome da chave a revogar."),
 ) -> None:
-    _require_dev()
+    """Revoga uma chave ativa do tenant."""
+    _ensure_dev()
     n = revoke_key(tenant_id, name)
-    if n == 0:
-        typer.secho("Chave não encontrada ou já revogada.", fg=typer.colors.YELLOW)
-    else:
-        typer.secho("Chave revogada.", fg=typer.colors.GREEN)
+    out = {"tenant_id": tenant_id, "revoked": int(n)}
+    typer.echo(json.dumps(out, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
